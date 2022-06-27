@@ -1,12 +1,12 @@
 from PySide2 import QtCore, QtWidgets, QtGui
-from ui import P2_QtEventHandling_MyWidgetsForm_design
+from ui import P2_QtEventHandling_MyWidgetsForm_design_V
 import time
 
 # noinspection PyCallingNonCallable
 class MyWidgetsForm(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(MyWidgetsForm, self).__init__(parent)
-        self.ui = P2_QtEventHandling_MyWidgetsForm_design.Ui_Form()
+        self.ui = P2_QtEventHandling_MyWidgetsForm_design_V.Ui_Form()
         self.ui.setupUi(self)
 
         self.setMouseTracking(True)
