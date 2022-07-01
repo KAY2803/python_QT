@@ -27,6 +27,10 @@ class QThreadPractice(QtWidgets.QWidget):
         self.urlThread = CheckUrlThread()
         self.urlThread.urlSignal.connect(self.checkUrlThreadUrlSignal)
 
+        # поток для получения системных параметров
+        self.systemData = SystemData()
+        self.systemData.start()
+
 
     def initUi(self):
         self.ui.pushButtonStartTimer.clicked.connect(self.onPushButtonStartClicked)
@@ -123,6 +127,13 @@ class CheckUrlThread(QtCore.QThread):
             response = requests.get(self.url)
             self.urlSignal.emit(response.status_code)
             time.sleep(self.timer)
+
+
+class SystemData(QtCore.QThread):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
 
 
 if __name__ == "__main__":
