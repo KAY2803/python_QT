@@ -1,5 +1,5 @@
 import sys
-
+# import mysql.connector
 from PySide2 import QtCore, QtWidgets, QtSql, QtGui
 from PySide2.QtSql import QSqlTableModel
 from PySide2.QtWidgets import QTableView
@@ -34,14 +34,15 @@ class CasesIntro(QtWidgets.QWidget):
 class ClientsWindow(QtWidgets.QMainWindow):
         def __init__(self, parent=None):
             super().__init__(parent)
-            # self.initSQLModel()
+            self.initSQLModel()
 
+        def initSQLModel(self):
             self.setWindowTitle("Клиенты")
             self.db = QtSql.QSqlDatabase.addDatabase('QSQLITE')
             self.db.setDatabaseName('db.cases')
             self.db.open()
 
-            self.model = QSqlTableModel(parent)
+            self.model = QSqlTableModel()
             self.model.setTable('clients')
             self.model.select()
 
