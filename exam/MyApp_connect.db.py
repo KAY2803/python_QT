@@ -7,7 +7,7 @@ from PySide2.QtSql import QSqlTableModel
 from PySide2.QtWidgets import QTableView
 
 from ui.page_1 import Ui_MainWindow
-from ui.pageCases import Ui_WindowCases
+from ui.pageCases1 import Ui_WindowCases
 
 
 class Page1(QtWidgets.QMainWindow):
@@ -28,12 +28,12 @@ class Cases(QtWidgets.QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        # self.ui = Ui_WindowCases()
-        # self.ui.setupUi(self)
+        self.ui = Ui_WindowCases()
+        self.ui.setupUi(self)
 
         self.initDB()
 
-        self.initUi()
+        # self.initUi()
 
         self.initTableViewModel()
 
@@ -43,35 +43,31 @@ class Cases(QtWidgets.QMainWindow):
         # self.model.select()
         # self.model.setEditStrategy(QSqlTableModel.OnManualSubmit)
 
-    def initUi(self):
-        self.tableView = QtWidgets.QTableView()
-
-        l = QtWidgets.QVBoxLayout()
-        l.addWidget(self.tableView)
-
-        self.setLayout(l)
+    # def initUi(self):
+    #     cw = QtWidgets.QWidget()
+    #
+    #     self.tableView = QtWidgets.QTableView()
+    #
+    #     l = QtWidgets.QVBoxLayout()
+    #     l.addWidget(self.tableView)
+    #
+    #     cw.setLayout(l)
+    #     self.setCentralWidget(cw)
 
     def initTableViewModel(self):
         sim = QtGui.QStandardItemModel()
-        self.cursor.execute('SELECT * FROM litigation.cases')
+        self.cursor.execute('SELECT CaseNumber, Court, ClaimantID, DoerID FROM litigation.cases')
         lst = self.cursor.fetchall()
         for elem in lst:
             item1 = QtGui.QStandardItem(str(elem[0]))
             item2 = QtGui.QStandardItem(str(elem[1]))
             item3 = QtGui.QStandardItem(str(elem[2]))
             item4 = QtGui.QStandardItem(str(elem[3]))
-            item5 = QtGui.QStandardItem(str(elem[4]))
-            item6 = QtGui.QStandardItem(str(elem[5]))
-            item7 = QtGui.QStandardItem(str(elem[6]))
-            item8 = QtGui.QStandardItem(str(elem[7]))
-            item9 = QtGui.QStandardItem(str(elem[8]))
-            item10 = QtGui.QStandardItem(str(elem[9]))
-            sim.appendRow([item1, item2, item3, item4, item5, item6, item7, item8, item9, item10])
 
-        sim.setHorizontalHeaderLabels(['№', 'Номер дела', 'Истец', 'Ответчик', 'Третье лицо', 'Исполнитель',
-                                       'Руководитель', 'Суд', 'Требования', 'Сумма иска'])
+        sim.appendRow([item1, item2, item3, item4])
+        sim.setHorizontalHeaderLabels(['Номер дела','Суд', 'Истец', 'Исполнитель'])
 
-        self.tableView.setModel(sim)
+        self.ui.tableViewClients.setModel(sim)
 
     def initDB(self):
         server = 'vpngw.avalon.ru'
@@ -85,7 +81,8 @@ class Cases(QtWidgets.QMainWindow):
             ';UID=' + user +
             ';PWD=' + pasw)
         self.cursor = self.con.cursor()
-        self.cursor.execute('SELECT * FROM litigation.cases')
+        self.cursor.execute('SELECT CaseNumber, Court, ClaimantID, DoerID FROM litigation.cases')
+        # self.cursor.execute('SELECT * FROM litigation.cases')
         print(self.cursor.fetchall())
 
 
