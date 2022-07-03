@@ -33,8 +33,6 @@ class Cases(QtWidgets.QMainWindow):
 
         self.initDB()
 
-        # self.initUi()
-
         self.initTableViewModel()
 
         # self.model = QtSql.QSqlRelationalTableModel()
@@ -43,30 +41,29 @@ class Cases(QtWidgets.QMainWindow):
         # self.model.select()
         # self.model.setEditStrategy(QSqlTableModel.OnManualSubmit)
 
-    # def initUi(self):
-    #     cw = QtWidgets.QWidget()
-    #
-    #     self.tableView = QtWidgets.QTableView()
-    #
-    #     l = QtWidgets.QVBoxLayout()
-    #     l.addWidget(self.tableView)
-    #
-    #     cw.setLayout(l)
-    #     self.setCentralWidget(cw)
-
     def initTableViewModel(self):
         sim = QtGui.QStandardItemModel()
-        self.cursor.execute('SELECT CaseNumber, Court, ClaimantID, DoerID FROM litigation.cases')
+        self.cursor.execute('SELECT LC.CaseNumber, LC.Court, PP.PersonName, LC.Claims, LT.TaskDateTime, SE.LastName '
+                            'FROM litigation.cases as LC '
+                            'LEFT JOIN parties.case_participants as PCP '
+                            'ON LC.id = PCP.CaseID '
+                            'LEFT JOIN parties.persons as PP '
+                            'ON PCP.PersonID = PP.id '
+                            'LEFT JOIN staff.employees as SE '
+                            'ON LC.DoerID = SE.id '
+                            'JOIN litigation.tasks as LT '
+                            'on LC.id = LT.CaseID')
         lst = self.cursor.fetchall()
         for elem in lst:
             item1 = QtGui.QStandardItem(str(elem[0]))
             item2 = QtGui.QStandardItem(str(elem[1]))
             item3 = QtGui.QStandardItem(str(elem[2]))
             item4 = QtGui.QStandardItem(str(elem[3]))
+            item5 = QtGui.QStandardItem(str(elem[4]))
+            item6 = QtGui.QStandardItem(str(elem[5]))
 
-        sim.appendRow([item1, item2, item3, item4])
-        sim.setHorizontalHeaderLabels(['Номер дела','Суд', 'Истец', 'Исполнитель'])
-
+        sim.appendRow([item1, item2, item3, item4, item5, item6])
+        sim.setHorizontalHeaderLabels(['Номер дела', 'Суд', 'Истец', 'Требования', 'Дата заседания', 'Исполнитель'])
         self.ui.tableViewClients.setModel(sim)
 
     def initDB(self):
@@ -81,9 +78,16 @@ class Cases(QtWidgets.QMainWindow):
             ';UID=' + user +
             ';PWD=' + pasw)
         self.cursor = self.con.cursor()
-        self.cursor.execute('SELECT CaseNumber, Court, ClaimantID, DoerID FROM litigation.cases')
-        # self.cursor.execute('SELECT * FROM litigation.cases')
-        print(self.cursor.fetchall())
+        self.cursor.execute('SELECT LC.CaseNumber, LC.Court, PP.PersonName, LC.Claims, LT.TaskDateTime, SE.LastName '
+                            'FROM litigation.cases as LC '
+                            'LEFT JOIN parties.case_participants as PCP '
+                            'ON LC.id = PCP.CaseID '
+                            'LEFT JOIN parties.persons as PP '
+                            'ON PCP.PersonID = PP.id '
+                            'LEFT JOIN staff.employees as SE '
+                            'ON LC.DoerID = SE.id '
+                            'JOIN litigation.tasks as LT '
+                            'on LC.id = LT.CaseID')
 
 
 if __name__ == "__main__":
