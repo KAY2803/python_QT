@@ -4,7 +4,7 @@ from PySide2.QtSql import QSqlQuery
 
 from ui.pageCases1 import Ui_WindowCases
 from ui.page_1 import Ui_MainWindow
-
+from ui.emp import Ui_MainWindowEmp
 
 class Page1(QtWidgets.QMainWindow):
     def __init__(self, parent=None):
@@ -34,7 +34,7 @@ class Cases(QtWidgets.QMainWindow):
         self.ui = Ui_WindowCases()
         self.ui.setupUi(self)
 
-        self.initTableViewModel()
+        self.initTVModelCases()
 
         self.ui.pushButtonSave.clicked.connect(self.onPushButtonSaveClicked)
 
@@ -57,7 +57,7 @@ class Cases(QtWidgets.QMainWindow):
             ';PWD=' + pasw)
         self.cursor = self.con.cursor()
 
-    def initTableViewModel(self):
+    def initTVModelCases(self):
         self.sim = QtGui.QStandardItemModel()
         self.cursor.execute('SELECT DISTINCT LC.CaseNumber, LC.Court, PP.PersonName, LC.Claims, LT.TaskDateTime, SE.LastName '
                             'FROM litigation.cases as LC '
@@ -82,8 +82,24 @@ class Cases(QtWidgets.QMainWindow):
             self.sim.appendRow([item1, item2, item3, item4, item5, item6])
         self.sim.setHorizontalHeaderLabels(['Номер дела', 'Суд', 'Истец', 'Требования', 'Дата заседания', 'Исполнитель'])
         self.ui.tableViewClients.setModel(self.sim)
+
         self.ui.tableViewClients.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
-        self.ui.tableViewClients.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+
+        self.ui.tableViewClients.setColumnWidth(0, 80)
+        self.ui.tableViewClients.setColumnWidth(1, 200)
+        self.ui.tableViewClients.setColumnWidth(2, 150)
+        self.ui.tableViewClients.setColumnWidth(3, 200)
+        self.ui.tableViewClients.resizeRowsToContents()
+
+        self.centralWidget().setMinimumWidth(self.ui.tableViewClients.columnWidth(0) +
+                                             self.ui.tableViewClients.columnWidth(1) +
+                                             self.ui.tableViewClients.columnWidth(2) +
+                                             self.ui.tableViewClients.columnWidth(3) +
+                                             self.ui.tableViewClients.columnWidth(4) +
+                                             self.ui.tableViewClients.columnWidth(5) + 50)
+
+        # self.ui.tableViewClients.horizontalHeader().setStretchLastSection(True)
+        # self.ui.tableViewClients.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
 
         # self.ui.tableViewClients.selectionModel().currentChanged.connect(self.changecell)
 
@@ -101,25 +117,42 @@ class Cases(QtWidgets.QMainWindow):
         self.cursor.commit()
         self.con.commit()
 
+    # def changeEvent(self, event: QtCore.QEvent) -> None:
+
+
+class EditableSQLModel(QtSql.QSqlTableModel):
+    def __init__(self, parent=None):
+        super(EditableSQLModel, self).__init__(parent)
+
+    def data(self, item, role):
+        if role == QtCore.Qt.BackgroundRole:
+            if item.row() % 2:
+                return QtGui.QColor(QtCore.Qt.blue)
+
 
 class Employees(QtWidgets.QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
 
+        self.ui = Ui_MainWindowEmp()
+        self.ui.setupUi(self)
+
         self.initDB()
 
-        self.initUi()
+        self.initSQLModel()
 
-        self.initListViewModel()
+        # self.initUi()
 
-    def initUi(self):
-        self.centralWidget = QtWidgets.QWidget()
-        self.setCentralWidget(self.centralWidget)
-        self.window = QtWidgets.QTableView()
-        self.window.setWindowTitle('Сотрудники')
 
-        # self.setMinimumSize(500, 700)
-        # self.setMaximumSize(500, 700)
+    # def initUi(self):
+    #     self.window = QtWidgets.QWidget()
+    #     self.window.setWindowTitle('Сотрудники')
+    #
+    #     self.vbox = QtWidgets.QVBoxLayout()
+    #     self.tv = QtWidgets.QTableView()
+    #     self.vbox.addWidget(self.tv)
+    #
+    #     self.window.setLayout(self.vbox)
 
 
         # self.model = QtSql.QSqlRelationalTableModel()
@@ -141,26 +174,35 @@ class Employees(QtWidgets.QMainWindow):
             ';PWD=' + pasw)
         self.cursor = self.con.cursor()
 
-    def initListViewModel(self):
-        self.lm = QtSql.QSqlQueryModel(parent=self.window)
-        self.lm.setHeaderData(1, QtCore.Qt.Horizontal, 'Фамилия')
-        self.cursor.execute('SELECT LastName from [staff].[employees]')
-        data = self.cursor.fetchall()
-        print(data)
+    def initSQLModel(self):
+        self.empModel = EditableSQLModel()
+        # self.empModel = QtSql.QSqlTableModel()
+        self.empModel.setEditStrategy(QtSql.QSqlTableModel.OnManualSubmit)
+        self.empModel.setTable('[staff].[employees]')
+        print(self.cursor.execute('SELECT * from [staff].[employees]').fetchall())
+        self.empModel.select()
 
-        self.window.setModel(self.lm)
+        self.empModel.setHeaderData(0, QtCore.Qt.Horizontal, 'id')
+        self.empModel.setHeaderData(1, QtCore.Qt.Horizontal, 'Фамилия')
+        self.empModel.setHeaderData(2, QtCore.Qt.Horizontal, 'Имя')
+        self.empModel.setHeaderData(3, QtCore.Qt.Horizontal, 'Должность')
+
+        self.ui.tableViewEmp.setModel(self.empModel)
+
+        # self.cursor.execute('SELECT LastName from [staff].[employees]')
+        # data = self.cursor.fetchall()
+        # print(data)
+        # self.tv.setModel(self.empModel)
 
 
-        # self.model = QtSql.QSqlTableModel()
-        # self.model.setTable('litigation.cases')
+        # index = self.empModel.rowCount()
+        # self.empModel.setData(self.empModel.index(index, 0), data[0][0])
+        # self.empModel.setData(self.empModel.index(index, 0), data[1][0])
+        # for elem in data:
+        #     print(elem)
+            # item1, item2 = elem[0], elem[1]
+        # print(item1, item2)
 
-        # self.model.select()
-        # self.model.setHeaderData(0, QtCore.Qt.Horizontal, 'Номер дела')
-        # self.model.setHeaderData(1, QtCore.Qt.Horizontal, 'Суд')
-        # self.model.setHeaderData(2, QtCore.Qt.Horizontal, 'Истец')
-        # self.model.setHeaderData(3, QtCore.Qt.Horizontal, 'Требования')
-        # self.model.setHeaderData(4, QtCore.Qt.Horizontal, 'Дата заседания')
-        # self.model.setHeaderData(5, QtCore.Qt.Horizontal, 'Исполнитель')
 
         # index = self.model.rowCount()
         # query = QSqlQuery()
