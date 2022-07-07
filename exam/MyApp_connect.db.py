@@ -61,6 +61,8 @@ class Cases(QtWidgets.QMainWindow):
         self.initTVModelCases()
 
         self.ui.pushButtonSave.clicked.connect(self.onPushButtonSaveClicked)
+        self.ui.pushButtonDel.clicked.connect(self.onPushButtonDelClicked)
+
         self.ui.addRow.triggered.connect(self.addRowTriggered)
         self.ui.addColumn.triggered.connect(self.addColumnTriggered)
 
@@ -119,48 +121,57 @@ class Cases(QtWidgets.QMainWindow):
         self.sim.setHorizontalHeaderLabels(['Номер дела', 'Суд', 'Истец', 'Требования', 'Дата заседания', 'Исполнитель'])
 
         # установка модели на tableView
-        self.ui.tableViewClients.setModel(self.sim)
+        self.ui.tableViewCases.setModel(self.sim)
 
         # выделение строки
-        self.ui.tableViewClients.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        self.ui.tableViewCases.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
 
-        # self.ui.tableViewClients.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+        # self.ui.tableViewCases.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
 
         # установка размеров столбцов
-        self.ui.tableViewClients.setColumnWidth(0, 80)
-        self.ui.tableViewClients.setColumnWidth(1, 200)
-        self.ui.tableViewClients.setColumnWidth(2, 150)
-        self.ui.tableViewClients.setColumnWidth(3, 200)
-        self.ui.tableViewClients.resizeRowsToContents()
+        self.ui.tableViewCases.setColumnWidth(0, 80)
+        self.ui.tableViewCases.setColumnWidth(1, 200)
+        self.ui.tableViewCases.setColumnWidth(2, 150)
+        self.ui.tableViewCases.setColumnWidth(3, 200)
+        self.ui.tableViewCases.resizeRowsToContents()
         # setAligment(QtCore.Qt.AlignHCenter)
 
         # установка ширины основного окна
-        self.centralWidget().setMinimumWidth(self.ui.tableViewClients.columnWidth(0) +
-                                             self.ui.tableViewClients.columnWidth(1) +
-                                             self.ui.tableViewClients.columnWidth(2) +
-                                             self.ui.tableViewClients.columnWidth(3) +
-                                             self.ui.tableViewClients.columnWidth(4) +
-                                             self.ui.tableViewClients.columnWidth(5) + 50)
+        self.centralWidget().setMinimumWidth(self.ui.tableViewCases.columnWidth(0) +
+                                             self.ui.tableViewCases.columnWidth(1) +
+                                             self.ui.tableViewCases.columnWidth(2) +
+                                             self.ui.tableViewCases.columnWidth(3) +
+                                             self.ui.tableViewCases.columnWidth(4) +
+                                             self.ui.tableViewCases.columnWidth(5) + 50)
 
 
     # Кнопка сохранения данных в БД - ОНА НЕ СРАБАТЫВАЕТ, НИЧЕГО НЕ СОХРАНЯЕТСЯ.
     # Ниже в классе Employees попыталась сделать через другую модель (не QItemModel, а SQLTableModel).
     # Были такие примеры на лекциях. Но я не понимаю, почему можно использовать совершенно разные модели из разных
     # классов (первый из QtGui - расширяет возможности графического интерфейса, а второй - QtSQL).
-    # Второй вариант через QtSQL у меня не то, что не работает, а еще даже и не выводит данные в приложение,
+    # Второй вариант через QtSQL у меня не то, что не сохраняет, а еще даже и не выводит данные в приложение,
     # только печатает в консоли
 
     def onPushButtonSaveClicked(self):
-        index = self.ui.tableViewClients.currentIndex()
+        index = self.ui.tableViewCases.currentIndex()
         value = self.sim.itemData(index)[0]
         self.sim.setData(index, value)
         self.sim.submit()
         print(value)
-        # self.ui.tableViewClients.update()
+        # self.ui.tableViewCases.update()
         self.cursor.execute('UPDATE litigation.cases'
                             f'SET Court = {str(value)}')
         self.cursor.commit()
         self.con.commit()
+
+    def onPushButtonDelClicked(self):
+        reply = QtWidgets.QMessageBox.question(self, 'Удалить строку?',
+                                       "Вы действительно хотите удалить строку?",
+                                       QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+                                       QtWidgets.QMessageBox.No)
+        if reply == QtWidgets.QMessageBox.Yes:
+            self.sim.removeRow(self.ui.tableViewCases.currentIndex().row())
+
 
     # слоты для меню
     @QtCore.Slot()
@@ -183,22 +194,6 @@ class Cases(QtWidgets.QMainWindow):
             event.ignore()
 
 
-""""Представление сотрудников"""
-
-
-"""Переопределение параметров модели"""
-
-
-class EditableSQLModel(QtSql.QSqlTableModel):
-    def __init__(self, parent=None):
-        super(EditableSQLModel, self).__init__(parent)
-
-    def data(self, item, role):
-        if role == QtCore.Qt.BackgroundRole:
-            if item.row() % 2:
-                return QtGui.QColor(QtCore.Qt.blue)
-
-
 """Представление сотрудников"""
 
 
@@ -211,7 +206,15 @@ class Employees(QtWidgets.QMainWindow):
 
         self.initDB()
 
-        self.initSQLModel()
+        self.initTVModelEmp()
+
+        self.ui.pushbuttonAddRow.clicked.connect(self.onPushButtonAddRow)
+        self.ui.pushbuttonAddColumn.clicked.connect(self.onPushButtonAddColumn)
+        self.ui.pushbuttonDelRow.clicked.connect(self.onPushButtonDelRow)
+        self.ui.pushbuttonDelColumn.clicked.connect(self.onPushButtonDelColumn)
+        #
+        # self.ui.actionSave.triggered.connect(self.saveTriggered)
+        # self.ui.ActionCopy.triggered.connect(self.copyTriggered)
 
     """Подключение к БД"""
 
@@ -230,24 +233,159 @@ class Employees(QtWidgets.QMainWindow):
 
     """Создание модели для отображения данных о сотрудниках из БД в tableView"""
 
-    def initSQLModel(self):
+    def initTVModelEmp(self):
+        # создание модели
+        self.simE = QtGui.QStandardItemModel()
 
-        """создание модели"""
-        self.empModel = EditableSQLModel()
-        # self.empModel = QtSql.QSqlTableModel() - ВАРИАНТ БЕЗ ПЕРЕОПРЕДЕЛЕНИЯ МОДЕЛИ
-        self.empModel.setEditStrategy(QtSql.QSqlTableModel.OnManualSubmit)
+        # запрос данных из БД
+        self.cursor.execute('SELECT * FROM staff.employees')
+        data = self.cursor.fetchall()
+        # print(data)
 
-        """Подключение к таблице с данными для отображения в модели"""
-        self.empModel.setTable('[staff].[employees]')
-        print(self.cursor.execute('SELECT * from [staff].[employees]').fetchall())
-        self.empModel.select()
+        # передача данных в модель
+        for elem in data:
+            item1 = QtGui.QStandardItem(str(elem[0]))
+            item2 = QtGui.QStandardItem(str(elem[1]))
+            item3 = QtGui.QStandardItem(str(elem[2]))
+            item4 = QtGui.QStandardItem(str(elem[3]))
+            self.simE.appendRow([item1, item2, item3, item4])
 
-        self.empModel.setHeaderData(0, QtCore.Qt.Horizontal, 'id')
-        self.empModel.setHeaderData(1, QtCore.Qt.Horizontal, 'Фамилия')
-        self.empModel.setHeaderData(2, QtCore.Qt.Horizontal, 'Имя')
-        self.empModel.setHeaderData(3, QtCore.Qt.Horizontal, 'Должность')
+        # установление заголовков столбцов модели
+        self.simE.setHorizontalHeaderLabels(['№', 'Фамилия', 'Имя', 'Должность'])
 
-        self.ui.tableViewEmp.setModel(self.empModel)
+        # установка модели на tableView
+        self.ui.tableViewEmp.setModel(self.simE)
+
+        # выделение строки
+        self.ui.tableViewEmp.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+
+        # self.ui.tableViewCases.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+
+        # установка размеров столбцов
+        self.ui.tableViewEmp.setColumnWidth(0, 20)
+        self.ui.tableViewEmp.setColumnWidth(1, 130)
+        self.ui.tableViewEmp.setColumnWidth(2, 130)
+        self.ui.tableViewEmp.setColumnWidth(3, 100)
+        self.ui.tableViewEmp.resizeRowsToContents()
+        self.ui.tableViewEmp.setColumnHidden(0, True)
+        # setAligment(QtCore.Qt.AlignHCenter)
+
+        # установка ширины основного окна
+        self.centralWidget().setMinimumWidth(self.ui.tableViewEmp.columnWidth(0) +
+                                             self.ui.tableViewEmp.columnWidth(1) +
+                                             self.ui.tableViewEmp.columnWidth(2) +
+                                             self.ui.tableViewEmp.columnWidth(3) + 200)
+
+    def onPushButtonAddRow(self):
+        self.simE.insertRow(self.simE.rowCount(), [])
+
+    def onPushButtonAddColumn(self):
+        self.simE.insertColumn(self.simE.columnCount(), [])
+
+    def onPushButtonDelRow(self):
+        self.simE.removeRow(self.ui.tableViewEmp.currentIndex().row())
+
+    def onPushButtonDelColumn(self):
+        print(self.ui.tableViewEmp.currentIndex().column())
+        self.simE.removeColumn(self.ui.tableViewEmp.currentIndex().column())
+
+    # def onPushButtonSaveClicked(self):
+    #     index = self.ui.tableViewEmp.currentIndex()
+    #     value = self.simE.itemData(index)[0]
+    #     self.simE.setData(index, value)
+    #     self.simE.submit()
+    #     print(value)
+    #     # self.ui.tableViewCases.update()
+    #     self.cursor.execute('UPDATE litigation.cases'
+    #                         f'SET Court = {str(value)}')
+    #     self.cursor.commit()
+    #     self.con.commit()
+    #
+
+
+
+    # # слоты для меню
+    # @QtCore.Slot()
+    # def addRowTriggered(self):
+    #     self.simE.insertRow(self.simE.rowCount(), [])
+    #
+    # @QtCore.Slot()
+    # def addColumnTriggered(self):
+    #     self.simE.insertColumn(self.simE.rowCount(), [])
+
+    """Переопределение события закрытия окна"""
+    def closeEvent(self, event):
+        reply = QtWidgets.QMessageBox.question(self, "Закрыть окно?",
+                                               "Вы действительно хотите закрыть окно?",
+                                               QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+                                               QtWidgets.QMessageBox.No)
+        if reply == QtWidgets.QMessageBox.Yes:
+            event.accept()
+        else:
+            event.ignore()
+
+
+#### ВАРИАНТ С QSL #####
+# """"Представление сотрудников"""
+# """Переопределение параметров модели"""
+#
+#
+# class EditableSQLModel(QtSql.QSqlTableModel):
+#     def __init__(self, parent=None):
+#         super(EditableSQLModel, self).__init__(parent)
+#
+#     def data(self, item, role):
+#         if role == QtCore.Qt.BackgroundRole:
+#             if item.row() % 2:
+#                 return QtGui.QColor(QtCore.Qt.blue)
+
+
+# class Employees(QtWidgets.QMainWindow):
+#     def __init__(self, parent=None):
+#         super().__init__(parent)
+#
+#         self.ui = Ui_MainWindowEmp()
+#         self.ui.setupUi(self)
+#
+#         self.initDB()
+#
+#         self.initSQLModel()
+#
+#     """Подключение к БД"""
+#
+#     def initDB(self):
+#         server = 'vpngw.avalon.ru'
+#         db = 'DevDB2022_KimAY'
+#         user = 'tsqllogin'
+#         pasw = 'Pa$$w0rd'
+#         self.con = pyodbc.connect(
+#             'DRIVER={ODBC Driver 17 for SQL Server}; '
+#             'SERVER=' + server +
+#             ';DATABASE=' + db +
+#             ';UID=' + user +
+#             ';PWD=' + pasw)
+#         self.cursor = self.con.cursor()
+#
+#     """Создание модели для отображения данных о сотрудниках из БД в tableView"""
+#
+#     def initSQLModel(self):
+#
+#         """создание модели"""
+#         self.empModel = EditableSQLModel()
+#         # self.empModel = QtSql.QSqlTableModel() - ВАРИАНТ БЕЗ ПЕРЕОПРЕДЕЛЕНИЯ МОДЕЛИ
+#         self.empModel.setEditStrategy(QtSql.QSqlTableModel.OnManualSubmit)
+#
+#         """Подключение к таблице с данными для отображения в модели"""
+#         self.empModel.setTable('[staff].[employees]')
+#         print(self.cursor.execute('SELECT * from [staff].[employees]').fetchall())
+#         self.empModel.select()
+#
+#         self.empModel.setHeaderData(0, QtCore.Qt.Horizontal, 'id')
+#         self.empModel.setHeaderData(1, QtCore.Qt.Horizontal, 'Фамилия')
+#         self.empModel.setHeaderData(2, QtCore.Qt.Horizontal, 'Имя')
+#         self.empModel.setHeaderData(3, QtCore.Qt.Horizontal, 'Должность')
+#
+#         self.ui.tableViewEmp.setModel(self.empModel)
 
 
 if __name__ == "__main__":
