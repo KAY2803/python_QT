@@ -7,6 +7,7 @@ from PySide2.QtSql import QSqlQuery
 from ui.pageCases1 import Ui_WindowCases
 from ui.page_1 import Ui_MainWindow
 from ui.emp import Ui_MainWindowEmp
+from ui.newEmp import Ui_MainWindowNewEmp
 
 
 """Начальная страница приложения. Позволяет выбрать представление информации в виде судебных дел либо сотрудников"""
@@ -20,8 +21,14 @@ class Page1(QtWidgets.QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
+        # self.casesThread = CasesThread()
+        # self.empThread = EmpThread()
+
+
+        # self.ui.pushButtonCases.clicked.connect(self.casesThread.start)
         self.ui.pushButtonCases.clicked.connect(self.onPushButtonCasesClicked)
         self.ui.pushButtonEmp.clicked.connect(self.onPushButtonEmpClicked)
+
 
     """Кнопки на начальной странице приложения "Дела", "Сотрудники" """
 
@@ -44,6 +51,19 @@ class Page1(QtWidgets.QMainWindow):
             event.accept()
         else:
             event.ignore()
+
+
+# class CasesThread(QtCore.QThread):
+#     casesSignal = QtCore.Signal(bool)
+#
+#     def run(self):
+#         self.status = True
+#         while self.status:
+#             self.cases = Cases()
+#             self.cases.show()
+#             self.casesSignal.emit(self.cases.isEnabled())
+#             if not self.cases.isEnabled():
+#                 break
 
 
 """Представление судебных дел"""
@@ -123,10 +143,9 @@ class Cases(QtWidgets.QMainWindow):
         # установка модели на tableView
         self.ui.tableViewCases.setModel(self.sim)
 
-        # выделение строки
-        self.ui.tableViewCases.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
-
-        # self.ui.tableViewCases.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+        # выделение строк и столбцов цветом
+        # self.ui.tableViewCases.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        self.ui.tableViewCases.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectColumns)
 
         # установка размеров столбцов
         self.ui.tableViewCases.setColumnWidth(0, 80)
@@ -136,21 +155,16 @@ class Cases(QtWidgets.QMainWindow):
         self.ui.tableViewCases.resizeRowsToContents()
         # setAligment(QtCore.Qt.AlignHCenter)
 
+        # self.ui.tableViewCases.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+
         # установка ширины основного окна
-        self.centralWidget().setMinimumWidth(self.ui.tableViewCases.columnWidth(0) +
-                                             self.ui.tableViewCases.columnWidth(1) +
-                                             self.ui.tableViewCases.columnWidth(2) +
-                                             self.ui.tableViewCases.columnWidth(3) +
-                                             self.ui.tableViewCases.columnWidth(4) +
-                                             self.ui.tableViewCases.columnWidth(5) + 50)
+        self.centralWidget().setMinimumWidth(self.setMinWidthCW())
 
-
-    # Кнопка сохранения данных в БД - ОНА НЕ СРАБАТЫВАЕТ, НИЧЕГО НЕ СОХРАНЯЕТСЯ.
-    # Ниже в классе Employees попыталась сделать через другую модель (не QItemModel, а SQLTableModel).
-    # Были такие примеры на лекциях. Но я не понимаю, почему можно использовать совершенно разные модели из разных
-    # классов (первый из QtGui - расширяет возможности графического интерфейса, а второй - QtSQL).
-    # Второй вариант через QtSQL у меня не то, что не сохраняет, а еще даже и не выводит данные в приложение,
-    # только печатает в консоли
+    def setMinWidthCW(self):
+        min_width_cw = 50
+        for i in range(self.sim.columnCount()):
+            min_width_cw += self.ui.tableViewCases.columnWidth(i)
+        return min_width_cw
 
     def onPushButtonSaveClicked(self):
         index = self.ui.tableViewCases.currentIndex()
@@ -181,6 +195,7 @@ class Cases(QtWidgets.QMainWindow):
     @QtCore.Slot()
     def addColumnTriggered(self):
         self.sim.insertColumn(self.sim.rowCount(), [])
+        self.centralWidget().setMinimumWidth(self.setMinWidthCW())
 
     """Переопределение события закрытия окна"""
     def closeEvent(self, event):
@@ -208,11 +223,13 @@ class Employees(QtWidgets.QMainWindow):
 
         self.initTVModelEmp()
 
+        self.NewEmp = NewEmp()
+
         self.ui.pushbuttonAddRow.clicked.connect(self.onPushButtonAddRow)
         self.ui.pushbuttonAddColumn.clicked.connect(self.onPushButtonAddColumn)
         self.ui.pushbuttonDelRow.clicked.connect(self.onPushButtonDelRow)
         self.ui.pushbuttonDelColumn.clicked.connect(self.onPushButtonDelColumn)
-        #
+
         # self.ui.actionSave.triggered.connect(self.saveTriggered)
         # self.ui.ActionCopy.triggered.connect(self.copyTriggered)
 
@@ -259,28 +276,78 @@ class Employees(QtWidgets.QMainWindow):
         # выделение строки
         self.ui.tableViewEmp.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
 
-        # self.ui.tableViewCases.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+        self.ui.tableViewEmp.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
 
         # установка размеров столбцов
-        self.ui.tableViewEmp.setColumnWidth(0, 20)
-        self.ui.tableViewEmp.setColumnWidth(1, 130)
-        self.ui.tableViewEmp.setColumnWidth(2, 130)
-        self.ui.tableViewEmp.setColumnWidth(3, 100)
         self.ui.tableViewEmp.resizeRowsToContents()
+
+        # скрываем первый столбец
         self.ui.tableViewEmp.setColumnHidden(0, True)
         # setAligment(QtCore.Qt.AlignHCenter)
 
         # установка ширины основного окна
-        self.centralWidget().setMinimumWidth(self.ui.tableViewEmp.columnWidth(0) +
-                                             self.ui.tableViewEmp.columnWidth(1) +
-                                             self.ui.tableViewEmp.columnWidth(2) +
-                                             self.ui.tableViewEmp.columnWidth(3) + 200)
+        self.centralWidget().setMinimumWidth(self.setMinWidthCW())
+
+        pr_model = QtCore.QSortFilterProxyModel()
+        pr_model.setSourceModel(self.simE)
+
+        # if event.button() == self.ui.lineEditFilterLastname:
+        pr_model.setFilterKeyColumn(1)
+        self.ui.lineEditFilterLastname.textChanged.connect(pr_model.setFilterRegExp)
+        self.ui.tableViewEmp.setModel(pr_model)
+
+    def setMinWidthCW(self):
+        min_width_cw = 200
+        for i in range(self.simE.columnCount()):
+            min_width_cw += self.ui.tableViewEmp.columnWidth(i)
+        return min_width_cw
+
+    # def (self, event: QtGui.QMouseEvent) -> None:
+    #     print(event.type())
+    #     pr_model = QtCore.QSortFilterProxyModel()
+    #     pr_model.setSourceModel(self.simE)
+    #
+    #     # if event.button() == self.ui.lineEditFilterLastname:
+    #     pr_model.setFilterKeyColumn(1)
+    #     self.ui.lineEditFilterLastname.textChanged.connect(pr_model.setFilterRegExp)
+    #     self.ui.tableViewEmp.setModel(pr_model)
+
+        # pr_model.setFilterKeyColumn(2)
+        # self.ui.lineEditFilterName.textChanged.connect(pr_model.setFilterRegExp)
+
+        # pr_model.setFilterKeyColumn(3)
+        # self.ui.lineEditFilterPosition.textChanged.connect(pr_model.setFilterRegExp)
+
+    def closeEvent(self, event):
+        reply = QtWidgets.QMessageBox.question(self, "Закрыть окно?",
+                                               "Вы действительно хотите закрыть окно?",
+                                               QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+                                               QtWidgets.QMessageBox.No)
+        if reply == QtWidgets.QMessageBox.Yes:
+            event.accept()
+        else:
+            event.ignore()
+
+
+
 
     def onPushButtonAddRow(self):
         self.simE.insertRow(self.simE.rowCount(), [])
+        self.NewEmp.show()
+
+        # self.windowNewEmp = NewEmp()
+        # self.windowNewEmp.show()
+        # self.simE.insertRow(self.simE.rowCount(), [])
+
+    def saveData(self, lastname, name, position):
+        index = self.simE.rowCount()
+        self.simE.setData(self.simE.index(index, 1), lastname)
+        self.simE.setData(self.simE.index(index, 2), name)
+        self.simE.setData(self.simE.index(index, 3), position)
 
     def onPushButtonAddColumn(self):
         self.simE.insertColumn(self.simE.columnCount(), [])
+        self.centralWidget().setMinimumWidth(self.setMinWidthCW())
 
     def onPushButtonDelRow(self):
         self.simE.removeRow(self.ui.tableViewEmp.currentIndex().row())
@@ -288,6 +355,18 @@ class Employees(QtWidgets.QMainWindow):
     def onPushButtonDelColumn(self):
         print(self.ui.tableViewEmp.currentIndex().column())
         self.simE.removeColumn(self.ui.tableViewEmp.currentIndex().column())
+
+    """Переопределение события закрытия окна"""
+
+    def closeEvent(self, event):
+        reply = QtWidgets.QMessageBox.question(self, "Закрыть окно?",
+                                               "Вы действительно хотите закрыть окно?",
+                                               QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+                                               QtWidgets.QMessageBox.No)
+        if reply == QtWidgets.QMessageBox.Yes:
+            event.accept()
+        else:
+            event.ignore()
 
     # def onPushButtonSaveClicked(self):
     #     index = self.ui.tableViewEmp.currentIndex()
@@ -302,8 +381,6 @@ class Employees(QtWidgets.QMainWindow):
     #     self.con.commit()
     #
 
-
-
     # # слоты для меню
     # @QtCore.Slot()
     # def addRowTriggered(self):
@@ -313,17 +390,36 @@ class Employees(QtWidgets.QMainWindow):
     # def addColumnTriggered(self):
     #     self.simE.insertColumn(self.simE.rowCount(), [])
 
-    """Переопределение события закрытия окна"""
-    def closeEvent(self, event):
-        reply = QtWidgets.QMessageBox.question(self, "Закрыть окно?",
-                                               "Вы действительно хотите закрыть окно?",
-                                               QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
-                                               QtWidgets.QMessageBox.No)
-        if reply == QtWidgets.QMessageBox.Yes:
-            event.accept()
-        else:
-            event.ignore()
 
+class NewEmp(QtWidgets.QMainWindow):
+    addNewEmp = QtCore.Signal(str, str, str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.ui = Ui_MainWindowNewEmp()
+        self.ui.setupUi(self)
+
+        #self.Emp = Employees()
+
+        self.ui.pushButtonSave.clicked.connect(self.onPushButtonSaveClicked)
+
+        self.ui.comboBoxPostion.addItems(['партнер', 'советник', 'ст.юрист', 'юрист', 'мл.юрист', 'секретарь', 'курьер'])
+
+
+    def onPushButtonSaveClicked(self):
+        self.addNewEmp.emit(self.ui.lineEditLastName.text(),
+                            self.ui.lineEditName.text(),
+                            self.ui.comboBoxPostion.itemText(self.ui.comboBoxPostion.currentIndex()))
+        self.close()
+
+        # index = self.Emp.simE.rowCount()
+        # self.Emp.simE.setData(self.Emp.simE.index(index, 1), self.ui.lineEditLastName.text())
+        # self.Emp.simE.setData(self.Emp.simE.index(index, 2), self.ui.lineEditName.text())
+        # self.Emp.simE.setData(self.Emp.simE.index(index, 2),self.ui.comboBoxPostion.itemText(self.ui.comboBoxPostion.currentIndex())
+        # self.Emp.simE.submit()
+        # if not self.ui.lineEditLastName.text():
+        #     self.Emp.simE.removeRow(self.simE.rowCount())
 
 #### ВАРИАНТ С QSL #####
 # """"Представление сотрудников"""
