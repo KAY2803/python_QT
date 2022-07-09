@@ -168,13 +168,15 @@ class Cases(QtWidgets.QMainWindow):
 
     def onPushButtonSaveClicked(self):
         index = self.ui.tableViewCases.currentIndex()
+        print(index)
         value = self.sim.itemData(index)[0]
         self.sim.setData(index, value)
         self.sim.submit()
         print(value)
         # self.ui.tableViewCases.update()
-        self.cursor.execute('UPDATE litigation.cases'
-                            f'SET Court = {str(value)}')
+
+        self.cursor.execute("UPDATE litigation.cases"
+                            f"SET Court = '{str(value)}'")
         self.cursor.commit()
         self.con.commit()
 
@@ -288,19 +290,47 @@ class Employees(QtWidgets.QMainWindow):
         # установка ширины основного окна
         self.centralWidget().setMinimumWidth(self.setMinWidthCW())
 
-        pr_model = QtCore.QSortFilterProxyModel()
-        pr_model.setSourceModel(self.simE)
+        self.ui.pushButtonSave.clicked.connect(self.onPushButtonSaveClicked)
 
-        # if event.button() == self.ui.lineEditFilterLastname:
-        pr_model.setFilterKeyColumn(1)
-        self.ui.lineEditFilterLastname.textChanged.connect(pr_model.setFilterRegExp)
-        self.ui.tableViewEmp.setModel(pr_model)
+        self.pr_model = QtCore.QSortFilterProxyModel()
+        self.pr_model.setSourceModel(self.simE)
+
+        self.ui.lineEditFilterLastname.textChanged.connect(self.setFilterLastName)
+
+        self.ui.lineEditFilterName.textChanged.connect(self.setFilterName)
+
+        self.ui.lineEditFilterPosition.textChanged.connect(self.setFilterPosition)
+
+        # pr_model.setFilterKeyColumn(1)
+        # self.ui.lineEditFilterLastname.textChanged.connect(pr_model.setFilterRegExp)
+        # pr_model.setFilterKeyColumn(2)
+        # self.ui.lineEditFilterName.textChanged.connect(pr_model.setFilterRegExp)
+        # pr_model.setFilterKeyColumn(3)
+        # self.ui.lineEditFilterPosition.textChanged.connect(pr_model.setFilterRegExp)
+        # self.ui.tableViewEmp.setModel(pr_model)
 
     def setMinWidthCW(self):
         min_width_cw = 200
         for i in range(self.simE.columnCount()):
             min_width_cw += self.ui.tableViewEmp.columnWidth(i)
         return min_width_cw
+
+    def setFilterLastName(self):
+        self.ui.lineEditFilterLastname.textChanged.connect(self.pr_model.setFilterRegExp)
+        self.pr_model.setFilterKeyColumn(1)
+        self.ui.tableViewEmp.setModel(self.pr_model)
+
+    def setFilterName(self):
+        self.ui.lineEditFilterName.textChanged.connect(self.pr_model.setFilterRegExp)
+        self.pr_model.setFilterKeyColumn(2)
+        self.ui.tableViewEmp.setModel(self.pr_model)
+
+    def setFilterPosition(self):
+        self.ui.lineEditFilterPosition.textChanged.connect(self.pr_model.setFilterRegExp)
+        self.pr_model.setFilterKeyColumn(3)
+        self.ui.tableViewEmp.setModel(self.pr_model)
+
+
 
     # def (self, event: QtGui.QMouseEvent) -> None:
     #     print(event.type())
@@ -328,7 +358,21 @@ class Employees(QtWidgets.QMainWindow):
         else:
             event.ignore()
 
+    def onPushButtonSaveClicked(self):
+        index = self.ui.tableViewEmp.currentIndex()
+        print(index)
 
+        value = self.simE.itemData(index)
+        print(value)
+        self.simE.setData(index, value)
+        self.simE.submit()
+
+        # self.ui.tableViewCases.update()
+
+        self.cursor.execute("UPDATE [staff].[employees]"
+                            f"SET FirstName = '{str(value)}'")
+        self.cursor.commit()
+        self.con.commit()
 
 
     def onPushButtonAddRow(self):
